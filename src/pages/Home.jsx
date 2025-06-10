@@ -299,7 +299,7 @@ END:VCARD`;
                 boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
               }}
             >
-              +1 (815) 295 - 3812
+              +1 8152953812
             </Button>
             <Button
               variant="contained"
