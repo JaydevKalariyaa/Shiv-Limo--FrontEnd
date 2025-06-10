@@ -23,28 +23,28 @@ const MotionCard = motion(Card);
 
 const fleetData = [
   {
-    name: 'Luxury Sedan',
+    name: "Luxury Sedan",
     image: LuxurySedan,
-    capacity: '4 passengers',
-    bags: '4 bags',
+    capacity: "3 passengers",
+    bags: "3 bags",
   },
   {
-    name: 'COMPACT SUV',
+    name: "COMPACT SUV",
     image: compactSuv,
-    capacity: '6 passengers',
-    bags: '6 bags',
+    capacity: "4 passengers",
+    bags: "4 bags",
   },
   {
-    name: 'FULL-SIZE SUV',
+    name: "FULL-SIZE SUV",
     image: fullSizeSuv,
-    capacity: '12 passengers',
-    bags: '12 bags',
+    capacity: "6 passengers",
+    bags: "6 bags",
   },
   {
-    name: 'PREMIUM SUV',
+    name: "PREMIUM SUV",
     image: premiumSuv,
-    capacity: '3 passengers',
-    bags: '3 bags',
+    capacity: "6 passengers",
+    bags: "6 bags",
   },
 ];
 

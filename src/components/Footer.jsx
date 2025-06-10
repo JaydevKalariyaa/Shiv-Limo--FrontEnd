@@ -13,10 +13,10 @@ const Footer = () => {
       transition={{ duration: 0.8 }}
       component="footer"
       sx={{
-        bgcolor: 'primary.main',
-        color: 'white',
+        bgcolor: "primary.main",
+        color: "white",
         py: { xs: 4, md: 6 },
-        mt: 'auto',
+        mt: "auto",
       }}
     >
       <Container maxWidth="lg">
@@ -28,15 +28,15 @@ const Footer = () => {
               sx={{
                 fontWeight: 600,
                 mb: 2,
-                position: 'relative',
-                '&::after': {
+                position: "relative",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
+                  position: "absolute",
                   bottom: -8,
                   left: 0,
                   width: 40,
                   height: 2,
-                  bgcolor: 'white',
+                  bgcolor: "white",
                 },
               }}
             >
@@ -59,50 +59,49 @@ const Footer = () => {
               sx={{
                 fontWeight: 600,
                 mb: 2,
-                position: 'relative',
-                '&::after': {
+                position: "relative",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
+                  position: "absolute",
                   bottom: -8,
                   left: 0,
                   width: 40,
                   height: 2,
-                  bgcolor: 'white',
+                  bgcolor: "white",
                 },
               }}
             >
               Contact Us
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Typography
                 variant="body2"
                 sx={{
                   opacity: 0.8,
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1,
                 }}
               >
-                Phone: +91 8152953812
+                Phone: +1 (815) 295 - 3812
               </Typography>
               <Typography
                 variant="body2"
                 sx={{
                   opacity: 0.8,
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1,
                 }}
               >
                 Email: shivlimousine@gmail.com
-
               </Typography>
               <Typography
                 variant="body2"
                 sx={{
                   opacity: 0.8,
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1,
                 }}
               >
@@ -117,26 +116,26 @@ const Footer = () => {
               sx={{
                 fontWeight: 600,
                 mb: 2,
-                position: 'relative',
-                '&::after': {
+                position: "relative",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
+                  position: "absolute",
                   bottom: -8,
                   left: 0,
                   width: 40,
                   height: 2,
-                  bgcolor: 'white',
+                  bgcolor: "white",
                 },
               }}
             >
               Follow Us
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1 }}>
               {[
-                { icon: <Facebook />, label: 'Facebook' },
-                { icon: <Twitter />, label: 'Twitter' },
-                { icon: <Instagram />, label: 'Instagram' },
-                { icon: <LinkedIn />, label: 'LinkedIn' },
+                { icon: <Facebook />, label: "Facebook" },
+                { icon: <Twitter />, label: "Twitter" },
+                { icon: <Instagram />, label: "Instagram" },
+                { icon: <LinkedIn />, label: "LinkedIn" },
               ].map((social, index) => (
                 <MotionIconButton
                   key={index}
@@ -145,9 +144,9 @@ const Footer = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                   sx={{
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.2)',
+                    bgcolor: "rgba(255,255,255,0.1)",
+                    "&:hover": {
+                      bgcolor: "rgba(255,255,255,0.2)",
                     },
                   }}
                 >
@@ -164,7 +163,7 @@ const Footer = () => {
           sx={{
             mt: 5,
             pt: 3,
-            borderTop: '1px solid rgba(255,255,255,0.1)',
+            borderTop: "1px solid rgba(255,255,255,0.1)",
           }}
         >
           <Typography
@@ -174,9 +173,9 @@ const Footer = () => {
               opacity: 0.8,
             }}
           >
-            {'© '}
+            {"© "}
             {new Date().getFullYear()}
-            {' Shiv Limo. All rights reserved.'}
+            {" Shiv Limo. All rights reserved."}
           </Typography>
         </MotionBox>
       </Container>
