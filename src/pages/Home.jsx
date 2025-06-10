@@ -31,7 +31,7 @@ VERSION:3.0
 FN:Bharat Sanariya
 ORG:Shiv Limo
 TITLE:Owner / Chauffer
-TEL;TYPE=CELL:+8152953812
+TEL;TYPE=CELL:+18152953812
 EMAIL:shivlimousine@gmail.com
 URL:https://shivlimo.com
 NOTE:Premium Car Service
