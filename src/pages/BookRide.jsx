@@ -24,6 +24,7 @@ import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import StraightenIcon from "@mui/icons-material/Straighten";
+import PlaceIcon from "@mui/icons-material/Place";
 import LuxurySedan from "../assets/luxury_sedan.jpg";
 import fullSizeSuv from "../assets/fullsize-suv.jpg";
 import compactSuv from "../assets/compact_suv.jpg";
@@ -80,8 +81,100 @@ const BookRide = () => {
   const [fareEstimate, setFareEstimate] = useState(null);
   const [isCalculatingFare, setIsCalculatingFare] = useState(false);
 
+  // Validation states
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  // Validation functions
+  const validateField = (name, value) => {
+    switch (name) {
+      case "fullName": {
+        if (!value.trim()) return "Full name is required";
+        if (value.trim().length < 2)
+          return "Full name must be at least 2 characters";
+        if (!/^[a-zA-Z\s]+$/.test(value.trim()))
+          return "Full name can only contain letters and spaces";
+        return "";
+      }
+
+      case "email": {
+        if (!value.trim()) return "Email is required";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value.trim()))
+          return "Please enter a valid email address";
+        return "";
+      }
+
+      case "phone": {
+        if (!value.trim()) return "Phone number is required";
+        const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
+        const cleanPhone = value.replace(/[\s\-()]/g, "");
+        if (!phoneRegex.test(cleanPhone))
+          return "Please enter a valid phone number";
+        if (cleanPhone.length < 10)
+          return "Phone number must be at least 10 digits";
+        return "";
+      }
+
+      case "pickup": {
+        if (!value.trim()) return "Pickup address is required";
+        if (value.trim().length < 5)
+          return "Please enter a complete pickup address";
+        return "";
+      }
+
+      case "dropoff": {
+        if (!value.trim()) return "Drop-off address is required";
+        if (value.trim().length < 5)
+          return "Please enter a complete drop-off address";
+        return "";
+      }
+
+      case "datetime": {
+        if (!value) return "Pickup date and time is required";
+        const selectedDate = new Date(value);
+        const now = new Date();
+        if (selectedDate <= now) return "Pickup time must be in the future";
+        return "";
+      }
+
+      case "vehicle": {
+        if (!value) return "Please select a vehicle type";
+        return "";
+      }
+
+      default:
+        return "";
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    Object.keys(form).forEach((key) => {
+      if (key !== "notes" && key !== "gratuity") {
+        const error = validateField(key, form[key]);
+        if (error) newErrors[key] = error;
+      }
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleFieldBlur = (name) => {
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const error = validateField(name, form[name]);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+
+    // Clear error when user starts typing
+    if (touched[name] && errors[name]) {
+      const error = validateField(name, value);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   // Calculate distance between two addresses using Google Maps Distance Matrix API
@@ -247,6 +340,13 @@ const BookRide = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate all fields before submission
+    if (!validateForm()) {
+      toast.error("Please fill all details in the form before submitting.");
+      return;
+    }
+
     setSubmitting(true);
 
     // Prepare payload with required keys
@@ -288,6 +388,8 @@ const BookRide = () => {
         notes: "",
         gratuity: "none",
       });
+      setErrors({});
+      setTouched({});
       navigate("/");
     } catch (error) {
       toast.error(error.message || "Something went wrong. Please try again.");
@@ -378,11 +480,14 @@ const BookRide = () => {
               name="fullName"
               value={form.fullName}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("fullName")}
               required
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: false }}
+              error={touched.fullName && errors.fullName}
+              helperText={touched.fullName && errors.fullName}
             />
           </Box>
           {/* Email */}
@@ -401,12 +506,15 @@ const BookRide = () => {
               name="email"
               value={form.email}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("email")}
               type="email"
               required
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: false }}
+              error={touched.email && errors.email}
+              helperText={touched.email && errors.email}
             />
           </Box>
           {/* Phone Number */}
@@ -425,12 +533,15 @@ const BookRide = () => {
               name="phone"
               value={form.phone}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("phone")}
               type="tel"
               required
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: false }}
+              error={touched.phone && errors.phone}
+              helperText={touched.phone && errors.phone}
             />
           </Box>
           {/* Pickup Address */}
@@ -456,10 +567,56 @@ const BookRide = () => {
                 setPickupSearchValue(newValue);
               }}
               onChange={(_, newValue) => {
-                const value =
-                  typeof newValue === "string" ? newValue : newValue?.label;
-                setForm({ ...form, pickup: value });
+                if (newValue) {
+                  const value =
+                    typeof newValue === "string" ? newValue : newValue?.label;
+                  setForm({ ...form, pickup: value });
+                  setPickupSearchValue(value);
+                } else {
+                  // Handle clear button click
+                  setForm({ ...form, pickup: "" });
+                  setPickupSearchValue("");
+                }
               }}
+              onBlur={() => {
+                // Ensure the current input value is saved when user clicks outside
+                if (pickupSearchValue && pickupSearchValue.trim()) {
+                  setForm({ ...form, pickup: pickupSearchValue });
+                }
+                // Validate the field
+                handleFieldBlur("pickup");
+              }}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} sx={{ py: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <PlaceIcon
+                      sx={{
+                        fontSize: 18,
+                        color: "primary.main",
+                        mr: 1.5,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "grey.800",
+                        lineHeight: 1.3,
+                        flex: 1,
+                      }}
+                    >
+                      {option.label}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -468,8 +625,24 @@ const BookRide = () => {
                   variant="outlined"
                   size="small"
                   InputLabelProps={{ shrink: false }}
+                  error={touched.pickup && errors.pickup}
+                  helperText={touched.pickup && errors.pickup}
                 />
               )}
+              sx={{
+                "& .MuiAutocomplete-listbox": {
+                  py: 0,
+                  "& li": {
+                    borderBottom: "1px solid #f0f0f0",
+                    "&:last-child": {
+                      borderBottom: "none",
+                    },
+                    "&:hover": {
+                      backgroundColor: "#f8f9fa",
+                    },
+                  },
+                },
+              }}
             />
           </Box>
           {/* Drop Off Address */}
@@ -495,10 +668,56 @@ const BookRide = () => {
                 setDropoffSearchValue(newValue);
               }}
               onChange={(_, newValue) => {
-                const value =
-                  typeof newValue === "string" ? newValue : newValue?.label;
-                setForm({ ...form, dropoff: value });
+                if (newValue) {
+                  const value =
+                    typeof newValue === "string" ? newValue : newValue?.label;
+                  setForm({ ...form, dropoff: value });
+                  setDropoffSearchValue(value);
+                } else {
+                  // Handle clear button click
+                  setForm({ ...form, dropoff: "" });
+                  setDropoffSearchValue("");
+                }
               }}
+              onBlur={() => {
+                // Ensure the current input value is saved when user clicks outside
+                if (dropoffSearchValue && dropoffSearchValue.trim()) {
+                  setForm({ ...form, dropoff: dropoffSearchValue });
+                }
+                // Validate the field
+                handleFieldBlur("dropoff");
+              }}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} sx={{ py: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <PlaceIcon
+                      sx={{
+                        fontSize: 18,
+                        color: "primary.main",
+                        mr: 1.5,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        color: "grey.800",
+                        lineHeight: 1.3,
+                        flex: 1,
+                      }}
+                    >
+                      {option.label}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -507,8 +726,24 @@ const BookRide = () => {
                   variant="outlined"
                   size="small"
                   InputLabelProps={{ shrink: false }}
+                  error={touched.dropoff && errors.dropoff}
+                  helperText={touched.dropoff && errors.dropoff}
                 />
               )}
+              sx={{
+                "& .MuiAutocomplete-listbox": {
+                  py: 0,
+                  "& li": {
+                    borderBottom: "1px solid #f0f0f0",
+                    "&:last-child": {
+                      borderBottom: "none",
+                    },
+                    "&:hover": {
+                      backgroundColor: "#f8f9fa",
+                    },
+                  },
+                },
+              }}
             />
           </Box>
           {/* Pickup Date & Time */}
@@ -527,12 +762,15 @@ const BookRide = () => {
               name="datetime"
               value={form.datetime}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("datetime")}
               type="datetime-local"
               required
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: true }}
+              error={touched.datetime && errors.datetime}
+              helperText={touched.datetime && errors.datetime}
             />
           </Box>
           {/* Vehicle Type */}
@@ -552,11 +790,13 @@ const BookRide = () => {
               name="vehicle"
               value={form.vehicle}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("vehicle")}
               required
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: false }}
+              error={touched.vehicle && errors.vehicle}
             >
               {vehicleTypes.map((type) => (
                 <MenuItem key={type.name} value={type.name}>
@@ -583,10 +823,12 @@ const BookRide = () => {
               name="gratuity"
               value={form.gratuity}
               onChange={handleChange}
+              onBlur={() => handleFieldBlur("gratuity")}
               fullWidth
               variant="outlined"
               size="small"
               InputLabelProps={{ shrink: false }}
+              error={touched.gratuity && errors.gratuity}
             >
               {gratuityOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
