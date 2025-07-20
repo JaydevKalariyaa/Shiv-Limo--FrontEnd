@@ -15,6 +15,12 @@ import {
   CircularProgress,
   Divider,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -25,10 +31,15 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import StraightenIcon from "@mui/icons-material/Straighten";
 import PlaceIcon from "@mui/icons-material/Place";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
+import PaymentIcon from "@mui/icons-material/Payment";
 import LuxurySedan from "../assets/luxury_sedan.jpg";
 import fullSizeSuv from "../assets/fullsize-suv.jpg";
 import compactSuv from "../assets/compact_suv.jpg";
 import premiumSuv from "../assets/premium-suv.jpg";
+import StripeProvider from "../components/StripeProvider";
+import StripePayment from "../components/StripePayment";
+import PaymentSuccessDialog from "../components/PaymentSuccessDialog";
 
 const MotionCard = motion(Card);
 
@@ -84,6 +95,14 @@ const BookRide = () => {
   // Validation states
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  // Payment states
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [paymentMethod] = useState("book_only"); // 'book_only' or 'pay_now'
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [bookingId, setBookingId] = useState(null);
+  const [paymentDetails, setPaymentDetails] = useState(null);
 
   // Validation functions
   const validateField = (name, value) => {
@@ -276,11 +295,11 @@ const BookRide = () => {
   useEffect(() => {
     const pickupTimer = setTimeout(() => {
       setDebouncedPickupSearch(pickupSearchValue);
-    }, 300);
+    }, 200); // Reduced from 300ms to 200ms for faster response
 
     const dropoffTimer = setTimeout(() => {
       setDebouncedDropoffSearch(dropoffSearchValue);
-    }, 300);
+    }, 200); // Reduced from 300ms to 200ms for faster response
 
     return () => {
       clearTimeout(pickupTimer);
@@ -294,10 +313,12 @@ const BookRide = () => {
         new window.google.maps.places.AutocompleteSessionToken();
       const service = new window.google.maps.places.AutocompleteService();
 
+      // More flexible search types
       const request = {
         input: debouncedPickupSearch,
-        types: ["address"],
+        types: ["geocode", "establishment", "address"],
         sessionToken: sessionToken,
+        componentRestrictions: { country: "us" }, // Restrict to US for better results
       };
 
       service.getPlacePredictions(request, (predictions, status) => {
@@ -308,8 +329,37 @@ const BookRide = () => {
               value: prediction.description,
             }))
           );
+        } else {
+          // If no results, try with just geocode type
+          const fallbackRequest = {
+            input: debouncedPickupSearch,
+            types: ["geocode"],
+            sessionToken: sessionToken,
+            componentRestrictions: { country: "us" },
+          };
+
+          service.getPlacePredictions(
+            fallbackRequest,
+            (fallbackPredictions, fallbackStatus) => {
+              if (
+                fallbackStatus ===
+                window.google.maps.places.PlacesServiceStatus.OK
+              ) {
+                setPickupOptions(
+                  fallbackPredictions.map((prediction) => ({
+                    label: prediction.description,
+                    value: prediction.description,
+                  }))
+                );
+              } else {
+                setPickupOptions([]);
+              }
+            }
+          );
         }
       });
+    } else {
+      setPickupOptions([]);
     }
   }, [debouncedPickupSearch]);
 
@@ -319,10 +369,12 @@ const BookRide = () => {
         new window.google.maps.places.AutocompleteSessionToken();
       const service = new window.google.maps.places.AutocompleteService();
 
+      // More flexible search types
       const request = {
         input: debouncedDropoffSearch,
-        types: ["address"],
+        types: ["geocode", "establishment", "address"],
         sessionToken: sessionToken,
+        componentRestrictions: { country: "us" }, // Restrict to US for better results
       };
 
       service.getPlacePredictions(request, (predictions, status) => {
@@ -333,13 +385,42 @@ const BookRide = () => {
               value: prediction.description,
             }))
           );
+        } else {
+          // If no results, try with just geocode type
+          const fallbackRequest = {
+            input: debouncedDropoffSearch,
+            types: ["geocode"],
+            sessionToken: sessionToken,
+            componentRestrictions: { country: "us" },
+          };
+
+          service.getPlacePredictions(
+            fallbackRequest,
+            (fallbackPredictions, fallbackStatus) => {
+              if (
+                fallbackStatus ===
+                window.google.maps.places.PlacesServiceStatus.OK
+              ) {
+                setDropoffOptions(
+                  fallbackPredictions.map((prediction) => ({
+                    label: prediction.description,
+                    value: prediction.description,
+                  }))
+                );
+              } else {
+                setDropoffOptions([]);
+              }
+            }
+          );
         }
       });
+    } else {
+      setDropoffOptions([]);
     }
   }, [debouncedDropoffSearch]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, selectedPaymentMethod = paymentMethod) => {
+    if (e) e.preventDefault();
 
     // Validate all fields before submission
     if (!validateForm()) {
@@ -361,6 +442,7 @@ const BookRide = () => {
       note: form.notes,
       estimatedFare: fareEstimate?.totalFare,
     };
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/bookings`,
@@ -370,32 +452,124 @@ const BookRide = () => {
           body: JSON.stringify(payload),
         }
       );
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to book ride");
       }
-      toast.success(
-        "Your request has been submitted. The owner will contact you soon."
-      );
-      setForm({
-        fullName: "",
-        email: "",
-        phone: "",
-        pickup: "",
-        dropoff: "",
-        datetime: "",
-        vehicle: "",
-        notes: "",
-        gratuity: "none",
-      });
-      setErrors({});
-      setTouched({});
-      navigate("/");
+
+      const result = await response.json();
+      const newBookingId = result.data._id;
+
+      if (selectedPaymentMethod === "pay_now") {
+        // Show payment dialog
+        setBookingId(newBookingId);
+        setShowPaymentDialog(true);
+      } else {
+        // Just book without payment
+        toast.success(
+          "Your request has been submitted. The owner will contact you soon."
+        );
+        resetForm();
+        navigate("/");
+      }
     } catch (error) {
       toast.error(error.message || "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setForm({
+      fullName: "",
+      email: "",
+      phone: "",
+      pickup: "",
+      dropoff: "",
+      datetime: "",
+      vehicle: "",
+      notes: "",
+      gratuity: "none",
+    });
+    setErrors({});
+    setTouched({});
+    setFareEstimate(null);
+  };
+  console.log("hello", isProcessingPayment);
+  const handlePaymentSuccess = async (paymentIntent) => {
+    setIsProcessingPayment(true);
+    try {
+      // Update booking with payment information
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/bookings/payment`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId,
+            paymentIntentId: paymentIntent.id,
+            stripePaymentId: paymentIntent.id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update booking with payment");
+      }
+      console.log("hellloooooooooooo");
+      // Send email notification to owner with booking details
+      const emailResponse = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/stripe/confirm-payment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntent.id,
+            bookingDetails: {
+              customerName: form.fullName,
+              customerEmail: form.email,
+              customerPhone: form.phone,
+              carType: form.vehicle,
+              bookingDateTime: form.datetime,
+              pickupLocation: form.pickup,
+              dropLocation: form.dropoff,
+              note: form.notes,
+            },
+          }),
+        }
+      );
+      console.log("hiiiiiiiiiiiiiiiii");
+      // Store payment details and show success dialog
+      if (emailResponse.ok) {
+        setPaymentDetails({
+          id: paymentIntent.id,
+          amount: fareEstimate?.totalFare || 0,
+          status: paymentIntent.status,
+        });
+        setShowPaymentDialog(false);
+        setIsProcessingPayment(false);
+        setShowSuccessDialog(true);
+      } else {
+        toast.error("Failed to confirm payment");
+      }
+    } catch (error) {
+      setIsProcessingPayment(false);
+      console.error("Error sending email:", error);
+      toast.error(
+        "Payment successful but failed to update booking. Please contact support."
+      );
+    }
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    resetForm();
+    navigate("/");
+  };
+
+  const handlePaymentError = (errorMessage) => {
+    toast.error(errorMessage || "Payment failed. Please try again.");
   };
 
   // Find selected vehicle object
@@ -816,7 +990,7 @@ const BookRide = () => {
                 mb: 0.5,
               }}
             >
-              Gratuity
+              Tip Amount
             </Typography>
             <TextField
               select
@@ -982,7 +1156,7 @@ const BookRide = () => {
                           <Box sx={{ display: "flex", alignItems: "center" }}>
                             <AttachMoneyIcon sx={{ fontSize: 20, mr: 1 }} />
                             <Typography sx={{ fontWeight: 500 }}>
-                              Gratuity (
+                              Tip Amount (
                               {
                                 gratuityOptions.find(
                                   (g) => g.value === form.gratuity
@@ -1118,20 +1292,116 @@ const BookRide = () => {
               InputLabelProps={{ shrink: false }}
             />
           </Box>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ mt: 2, fontWeight: 600, letterSpacing: 1 }}
-            fullWidth
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? "Booking..." : "Book Now"}
-          </Button>
+
+          {/* Payment Options - Two Buttons Side by Side */}
+          <Box sx={{ mt: 3 }}>
+           
+            <Box sx={{ display: "flex", gap: 2 }}>
+              {/* Book Now, Pay Later Button */}
+              <Button
+                type="submit"
+                variant="outlined"
+                size="large"
+                sx={{
+                  flex: 1,
+                  fontWeight: 600,
+                  py: 2,
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  "&:hover": {
+                    borderColor: "primary.dark",
+                    bgcolor: "primary.50",
+                  },
+                }}
+                onClick={() => handleSubmit(null, "book_only")}
+                disabled={submitting}
+                startIcon={<PaymentIcon />}
+              >
+                {submitting && paymentMethod === "book_only"
+                  ? "Processing..."
+                  : "Book Now, Pay Later"}
+              </Button>
+
+              {/* Pay Now & Book Button */}
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                sx={{
+                  flex: 1,
+                  fontWeight: 600,
+                  py: 2,
+                  bgcolor: "primary.main",
+                  "&:hover": {
+                    bgcolor: "primary.dark",
+                  },
+                }}
+                onClick={() => handleSubmit(null, "pay_now")}
+                disabled={submitting}
+                startIcon={<CreditCardIcon />}
+              >
+                {submitting && paymentMethod === "pay_now"
+                  ? "Processing..."
+                  : "Pay Now & Book"}
+              </Button>
+            </Box>
+          </Box>
         </Box>
       </Container>
+
+      {/* Payment Dialog */}
+      <Dialog
+        open={showPaymentDialog}
+        onClose={() => !isProcessingPayment && setShowPaymentDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            bgcolor: "grey.50",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{ textAlign: "center", fontWeight: 700, fontSize: 24 }}
+          style={{ fontSize: 20 }}
+        >
+          Complete Your Payment
+        </DialogTitle>
+        <DialogContent>
+          <StripeProvider>
+            <StripePayment
+              amount={fareEstimate?.totalFare || 0}
+              customerDetails={form}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentError={handlePaymentError}
+              isProcessing={isProcessingPayment}
+              setIsProcessing={setIsProcessingPayment}
+              isProcessingPayment={isProcessingPayment}
+            />
+          </StripeProvider>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setShowPaymentDialog(false)}
+            variant="outlined"
+            color="primary"
+            disabled={isProcessingPayment}
+          >
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Success Dialog */}
+      {showSuccessDialog && (
+        <PaymentSuccessDialog
+          open={showSuccessDialog}
+          onClose={handleSuccessDialogClose}
+          bookingDetails={form}
+          paymentDetails={paymentDetails}
+        />
+      )}
     </Box>
   );
 };
