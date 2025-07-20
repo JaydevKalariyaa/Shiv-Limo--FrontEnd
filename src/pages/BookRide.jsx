@@ -1295,8 +1295,13 @@ const BookRide = () => {
 
           {/* Payment Options - Two Buttons Side by Side */}
           <Box sx={{ mt: 3 }}>
-           
-            <Box sx={{ display: "flex", gap: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                flexDirection: { xs: "column", sm: "row" },
+              }}
+            >
               {/* Book Now, Pay Later Button */}
               <Button
                 type="submit"
@@ -1357,8 +1362,14 @@ const BookRide = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
+            borderRadius: { xs: 0, sm: 3 },
             bgcolor: "grey.50",
+            width: { xs: "95%", sm: "auto" },
+          },
+        }}
+        sx={{
+          "& .MuiDialog-paper": {
+            margin: { xs: 0, sm: "auto" },
           },
         }}
       >
@@ -1368,7 +1379,7 @@ const BookRide = () => {
         >
           Complete Your Payment
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 0 }}>
           <StripeProvider>
             <StripePayment
               amount={fareEstimate?.totalFare || 0}
